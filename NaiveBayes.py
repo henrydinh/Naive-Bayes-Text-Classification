@@ -160,7 +160,7 @@ def main(training_spam_dir, training_ham_dir, test_spam_dir, test_ham_dir):
         if test_set[i].getLearnedClass() == test_set[i].getTrueClass():
             correct_guesses += 1
     print "Correct guesses: %s/%s" % (correct_guesses, len(test_set))
-    print "Accuracy: %.4f" % (100.0 * float(correct_guesses) / float(len(test_set)))
+    print "Accuracy: %.4f%%" % (100.0 * float(correct_guesses) / float(len(test_set)))
 
 
 if __name__ == '__main__':
