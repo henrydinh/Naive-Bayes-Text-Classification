@@ -7,6 +7,7 @@ import os
 import sys
 import collections
 import re
+import math
 
 # Stores emails as dictionaries. email_file_name : Document (class defined below)
 training_set = dict()
@@ -14,6 +15,12 @@ test_set = dict()
 
 # ham = 0 for not spam, spam = 1 for is spam
 classes = ["ham", "spam"]
+
+# Conditional probability from the training data
+conditional_probability = dict()
+# Prior for the classifications using the training data
+prior = dict()
+
 
 # Read all text files in the given directory and construct the data set, D
 # the directory path should just be like "train/ham" for example
@@ -26,18 +33,28 @@ def makeDataSet(storage_dict, directory, true_class):
             with open(dir_entry_path, 'r') as text_file:
                 # stores dictionary of dictionary of dictionary as explained above in the initialization
                 text = text_file.read()
-                storage_dict.update({dir_entry_path : Document(text, bagOfWords(text), true_class)})
+                storage_dict.update({dir_entry_path: Document(text, bagOfWords(text), true_class)})
+
 
 # counts frequency of each word in the text files and order of sequence doesn't matter
 def bagOfWords(text):
-    bagsofwords = [collections.Counter(re.findall(r'\w+', text))]
-    return bagsofwords
+    bagsofwords = collections.Counter(re.findall(r'\w+', text))
+    return dict(bagsofwords)
+
+# Extracts the vocabulary of all the text in a data set
+def extractVocab(data_set):
+    all_text = ""
+    v = []
+    for x in data_set:
+        all_text += data_set[x].getText()
+    for y in bagOfWords(all_text):
+        v.append(y)
+    return v
 
 # Training
-# C is set of classes. 1 for spam and 0 for not spam
-# D is the data set
 def trainMultinomialNB():
-    # Extract vocabulary done in Documents class, which is contained in data dictionaries
+    # v is the vocabulary of the training set
+    v = extractVocab(training_set)
     # n is the number of documents
     n = len(training_set)
     # for each class in classes (i.e. ham and spam)
@@ -50,22 +67,35 @@ def trainMultinomialNB():
             if training_set[i].getTrueClass() == c:
                 n_c += 1
                 text_c += training_set[i].getText()
-        prior = float(n_c) / float(n)
+        prior[c] = float(n_c) / float(n)
         # Count frequencies/tokens of each term in text_c in dictionary form (i.e. token : frequency)
         token_freqs = bagOfWords(text_c)
         # Calculate conditional probabilities for each token and sum using laplace smoothing and log-scale
-        conditional_probability = 0.0
-        for t in token_freqs:
-            conditional_probability += ((token_freqs[t] + 1) / (len(text_c) + 1))
+        for t in v:
+            if t in token_freqs:
+                conditional_probability.update({t + "_" + c: (float((token_freqs[t] + 1.0)) / float((len(text_c) + len(token_freqs))))})
+            else:
+                conditional_probability.update({t + "_" + c: (float(1.0) / float((len(text_c) + len(token_freqs))))})
+
+# Testing. Data instance is a Document
+# Returns classification guess
+def applyMultinomialNB(data_instance):
+    score = {}
+    for c in classes:
+        score[c] = math.log10(float(prior[c]))
+        for t in data_instance.getWordFreqs():
+            if (t + "_" + c) in conditional_probability:
+                score[c] += float(math.log10(conditional_probability[t + "_" + c]))
+    if score["spam"] > score["ham"]:
+        return "spam"
+    else:
+        return "ham"
 
 
-# Testing
-def applyMultinomialNB():
-    pass
+
 
 # Document class to store email instances easier
 class Document:
-
     text = ""
     word_freqs = {}
 
@@ -98,17 +128,40 @@ class Document:
 # takes directories holding the data text files as paramters. "train/ham" for example
 def main(training_spam_dir, training_ham_dir, test_spam_dir, test_ham_dir):
     # Set up data sets. Dictionaries containing the text, word frequencies, and true/learned classifications
-    makeDataSet(training_set,training_spam_dir, classes[1])
+    makeDataSet(training_set, training_spam_dir, classes[1])
     makeDataSet(training_set, training_ham_dir, classes[0])
     makeDataSet(test_set, test_spam_dir, classes[1])
     makeDataSet(test_set, test_ham_dir, classes[0])
-    # Prints out the data set for testing purposes
+
+    # Prints out the data set for testing purposes to make sure data is correctly read
+    # for i in test_set:
+    #     print i + " : "
+    #     print test_set[i].getText()
+    #     print test_set[i].getWordFreqs()
+    #     print test_set[i].getTrueClass()
+    #     print
+
+    # Train using the training data
+    trainMultinomialNB()
+
+    # Checking to see if calculated conditional probabilities and prior are correct
+    # for i in conditional_probability:
+    #     print i + " : %.10f" % conditional_probability[i]
+    # sum = 0.0
+    # for i in prior:
+    #     print i + " : %.8f" % prior[i]
+    #     sum += prior[i]
+    # print sum
+
+    # Test using the testing data
+    correct_guesses = 0
     for i in test_set:
-        print i + " : "
-        print test_set[i].getText()
-        print test_set[i].getWordFreqs()
-        print test_set[i].getTrueClass()
-        print
+        test_set[i].setLearnedClass(applyMultinomialNB(test_set[i]))
+        if test_set[i].getLearnedClass() == test_set[i].getTrueClass():
+            correct_guesses += 1
+    print "Correct guesses: %s/%s" % (correct_guesses, len(test_set))
+    print "Accuracy: %.4f" % (100.0 * float(correct_guesses) / float(len(test_set)))
+
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
