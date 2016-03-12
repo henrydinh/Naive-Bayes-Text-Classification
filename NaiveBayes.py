@@ -190,11 +190,11 @@ def main(training_spam_dir, training_ham_dir, test_spam_dir, test_ham_dir):
         if filtered_test_set[i].getLearnedClass() == filtered_test_set[i].getTrueClass():
             correct_guesses_filtered += 1
 
-    print "Correct guesses before filtering stop words:%d/%s" % (correct_guesses, len(test_set))
-    print "Accuracy before filtering stop words:\t\t%.4f%%" % (100.0 * float(correct_guesses) / float(len(test_set)))
+    print "Correct guesses before filtering stop words:\t%d/%s" % (correct_guesses, len(test_set))
+    print "Accuracy before filtering stop words:\t\t\t%.4f%%" % (100.0 * float(correct_guesses) / float(len(test_set)))
     print
-    print "Correct guesses after filtering stop words:\t%d/%s" % (correct_guesses_filtered, len(filtered_test_set))
-    print "Accuracy after filtering stop words:\t\t%.4f%%" % (100.0 * float(correct_guesses_filtered) / float(len(filtered_test_set)))
+    print "Correct guesses after filtering stop words:\t\t%d/%s" % (correct_guesses_filtered, len(filtered_test_set))
+    print "Accuracy after filtering stop words:\t\t\t%.4f%%" % (100.0 * float(correct_guesses_filtered) / float(len(filtered_test_set)))
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
